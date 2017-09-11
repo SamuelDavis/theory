@@ -2,7 +2,7 @@
 
 const STANDARD_TUNING = ['e', 'B', 'G', 'D', 'A', 'E'];
 const CHROMATIC = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
-const CHROMATIC_SCALE_INTERVALS = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+const CHROMATIC_SCALE_INTERVALS = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 const MAJOR_SCALE_INTERVALS = [0, 2, 2, 2, 1, 2, 2, 1];
 const MINOR_SCALE_INTERVALS = [0, 2, 1, 2, 2, 1, 2, 2];
 const MAJOR_CHORD_INTERVALS = [0, 2, 4];
@@ -16,7 +16,7 @@ function calculateNeck(array $tuning, $tab = false, $note = null)
         foreach (calculateScale(CHROMATIC_SCALE_INTERVALS, $rootNote) as $fret => $guitarNote) {
             if (!$note || in_array($guitarNote, $notes)) {
                 $value = $tab ? $fret : $guitarNote;
-                $value = strlen($value) < 2 ? "-{$value}" : $value;
+                $value = strlen($value) < 2 ? "{$value}-" : $value;
                 $result[$rootNote][$fret] = $value;
             } else {
                 $result[$rootNote][$fret] = '--';
@@ -54,7 +54,7 @@ function calculateChord(array $scale = MAJOR_SCALE_INTERVALS, array $chord = MAJ
 }
 
 $drawing = "\n";
-$chord = calculateChord(MAJOR_SCALE_INTERVALS, MAJOR_CHORD_INTERVALS, 'G');
+$chord = calculateChord(MAJOR_SCALE_INTERVALS, MAJOR_CHORD_INTERVALS, 'C');
 foreach (calculateNeck(STANDARD_TUNING, true, $chord) as $string => $notes) {
     $drawing .= $string . '|' . implode('|', $notes) . "\n";
 }
@@ -70,7 +70,7 @@ foreach (calculateNeck(STANDARD_TUNING, true, $chord) as $string => $notes) {
     <title>Document</title>
 </head>
 <body>
-<h1>Gmaj Chord: <?= implode(', ', $chord) ?></h1>
+<h1>Cmaj Chord: <?= implode(', ', $chord) ?></h1>
 <pre><?= $drawing ?></pre>
 <h1>Guitar</h1>
 <table>
