@@ -25,7 +25,7 @@ class Guitar
             $root = array_search(strtoupper($string), Scale::CHROMATIC);
             foreach ($notes as $note) {
                 $acc[$string] = $acc[$string] ?? [];
-                $acc[$string][] = static::fret($note, $root);
+                $acc[$string][] = static::findFretFor($note, $root);
             }
 
             return $acc;
@@ -40,7 +40,7 @@ class Guitar
         }, $frets, array_keys($frets)));
     }
 
-    public static function fret(int $note, int $root)
+    public static function findFretFor(int $note, int $root)
     {
         return (($note + 12) - $root) % count(Scale::CHROMATIC);
     }
