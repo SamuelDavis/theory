@@ -94,6 +94,12 @@ $interval = Scale::KEYS[$key] ?? Scale::MAJOR_INTERVALS;
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Document</title>
+    <style>
+        button.selected {
+            font-weight: bold;
+            color: #1A88FE;
+        }
+    </style>
 </head>
 <body>
 <form method="post" id="form">
@@ -103,7 +109,7 @@ $interval = Scale::KEYS[$key] ?? Scale::MAJOR_INTERVALS;
         <?php endforeach; ?>
     </select>
     <?php foreach (Scale::CHROMATIC as $chromatic => $symbol): ?>
-        <button name="note" type="submit" value="<?= $chromatic ?>"><?= $symbol ?></button>
+        <button name="note" type="submit" class="<?= $note == $chromatic ? 'selected' : '' ?>" value="<?= $chromatic ?>"><?= $symbol ?></button>
     <?php endforeach; ?>
 </form>
 
