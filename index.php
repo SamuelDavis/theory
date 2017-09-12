@@ -1,63 +1,89 @@
 <?php
 
-const STANDARD_TUNING = ['e', 'B', 'G', 'D', 'A', 'E'];
-const CHROMATIC = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
-const CHROMATIC_SCALE_INTERVALS = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-const MAJOR_SCALE_INTERVALS = [0, 2, 2, 2, 1, 2, 2, 1];
-const MINOR_SCALE_INTERVALS = [0, 2, 1, 2, 2, 1, 2, 2];
-const MAJOR_CHORD_INTERVALS = [0, 2, 4];
-
-function calculateNeck(array $tuning, $tab = false, $note = null)
+class Render
 {
-    $notes = is_array($note) ? $note : [$note];
-    $result = [];
+    public static function symbolsFor(array $notes)
+    {
+        return array_map(function (int $note) {
+            return static::symbolFor($note);
+        }, $notes);
+    }
 
-    foreach ($tuning as $string => $rootNote) {
-        foreach (calculateScale(CHROMATIC_SCALE_INTERVALS, $rootNote) as $fret => $guitarNote) {
-            if (!$note || in_array($guitarNote, $notes)) {
-                $value = $tab ? $fret : $guitarNote;
-                $value = strlen($value) < 2 ? "{$value}-" : $value;
-                $result[$rootNote][$fret] = $value;
-            } else {
-                $result[$rootNote][$fret] = '--';
+    public static function symbolFor(int $note)
+    {
+        return Scale::CHROMATIC[$note % count(Scale::CHROMATIC)];
+    }
+}
+
+class Guitar
+{
+    const STANDARD_TUNING = ['e', 'B', 'G', 'D', 'A', 'E'];
+
+    public static function tabulate(array $notes, array $tuning = self::STANDARD_TUNING)
+    {
+        $frets = array_reduce($tuning, function (array $acc, string $string) use ($notes) {
+            $root = array_search(strtoupper($string), Scale::CHROMATIC);
+            foreach ($notes as $note) {
+                $acc[$string] = $acc[$string] ?? [];
+                $acc[$string][] = static::fret($note, $root);
             }
-        }
+
+            return $acc;
+        }, []);
+
+        return implode("\n", array_map(function (array $frets, string $string) {
+            $frets = array_map(function (string $fret) {
+                return strlen($fret) < 2 ? "-{$fret}" : $fret;
+            }, $frets);
+
+            return "{$string}|" . str_replace(' ', '-', implode('-', $frets));
+        }, $frets, array_keys($frets)));
     }
 
-    return $result;
-}
-
-function calculateScale(array $intervals, $root = 'C')
-{
-    $result = [];
-    $i = array_search(strtoupper($root), CHROMATIC);
-    $chromaticLength = count(CHROMATIC);
-
-    foreach ($intervals as $interval) {
-        $i += $interval;
-        $i %= $chromaticLength;
-        $result[] = CHROMATIC[$i];
+    public static function fret(int $note, int $root)
+    {
+        return (($note + 12) - $root) % count(Scale::CHROMATIC);
     }
-
-    return $result;
 }
 
-function calculateChord(array $scale = MAJOR_SCALE_INTERVALS, array $chord = MAJOR_CHORD_INTERVALS, $root = 'C')
+class Scale
 {
-    $notes = calculateScale($scale, $root);
+    const CHROMATIC = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
+    const CHROMATIC_INTERVALS = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+    const MAJOR_INTERVALS = [0, 2, 2, 2, 1, 2, 2];
+    const MINOR_INTERVALS = [0, 2, 1, 2, 2, 1, 2];
+    const KEYS = [
+        'Major' => self::MAJOR_INTERVALS,
+        'Minor' => self::MINOR_INTERVALS,
+    ];
 
-    return array_reduce($chord, function (array $acc, $i) use ($notes) {
-        $acc[] = $notes[$i];
+    public static function of(int $root, array $intervals = self::MAJOR_INTERVALS)
+    {
+        $chromaticLength = count(static::CHROMATIC);
 
-        return $acc;
-    }, []);
+        return array_map(function (int $interval) use (&$root, $chromaticLength) {
+            return ($root += $interval) % $chromaticLength;
+        }, $intervals);
+    }
 }
 
-$drawing = "\n";
-$chord = calculateChord(MAJOR_SCALE_INTERVALS, MAJOR_CHORD_INTERVALS, 'C');
-foreach (calculateNeck(STANDARD_TUNING, true, $chord) as $string => $notes) {
-    $drawing .= $string . '|' . implode('|', $notes) . "\n";
+class Chord
+{
+    const INTERVALS = [0, 2, 4];
+
+    public static function withRoot(int $root, array $intervals = Scale::MAJOR_INTERVALS)
+    {
+        $scale = Scale::of($root, $intervals);
+
+        return array_map(function (int $interval) use ($scale) {
+            return $scale[$interval];
+        }, static::INTERVALS);
+    }
 }
+
+$note = $_POST['note'] ?? array_search('C', Scale::CHROMATIC);
+$key = $_POST['key'] ?? array_keys(Scale::KEYS)[0];
+$interval = Scale::KEYS[$key] ?? Scale::MAJOR_INTERVALS;
 
 ?>
 <!doctype html>
@@ -70,43 +96,34 @@ foreach (calculateNeck(STANDARD_TUNING, true, $chord) as $string => $notes) {
     <title>Document</title>
 </head>
 <body>
-<h1>Cmaj Chord: <?= implode(', ', $chord) ?></h1>
-<pre><?= $drawing ?></pre>
-<h1>Guitar</h1>
-<table>
-    <tbody>
-    <?php foreach (STANDARD_TUNING as $rootNote): ?>
-        <tr>
-            <?php foreach (calculateScale(CHROMATIC_SCALE_INTERVALS, $rootNote) as $guitarNote): ?>
-                <td><?= $guitarNote ?></td>
-            <?php endforeach; ?>
-        </tr>
+<form method="post" id="form">
+    <select name="key" id="key">
+        <?php foreach (array_keys(Scale::KEYS) as $value): ?>
+            <option value="<?= $value ?>" <?= $key === $value ? 'selected' : '' ?>><?= $value ?></option>
+        <?php endforeach; ?>
+    </select>
+    <?php foreach (Scale::CHROMATIC as $chromatic => $symbol): ?>
+        <button name="note" type="submit" value="<?= $chromatic ?>"><?= $symbol ?></button>
     <?php endforeach; ?>
-    </tbody>
-</table>
-<h1>Major Scales</h1>
-<table>
-    <tbody>
-    <?php foreach (CHROMATIC as $rootNote): ?>
-        <tr>
-            <?php foreach (calculateScale(MAJOR_SCALE_INTERVALS, $rootNote) as $majorNote): ?>
-                <td><?= $majorNote ?></td>
-            <?php endforeach; ?>
-        </tr>
-    <?php endforeach; ?>
-    </tbody>
-</table>
-<h1>Minor Scales</h1>
-<table>
-    <tbody>
-    <?php foreach (CHROMATIC as $rootNote): ?>
-        <tr>
-            <?php foreach (calculateScale(MINOR_SCALE_INTERVALS, $rootNote) as $majorNote): ?>
-                <td><?= $majorNote ?></td>
-            <?php endforeach; ?>
-        </tr>
-    <?php endforeach; ?>
-    </tbody>
-</table>
+</form>
+
+<section>
+    <h3>Scale of <?= Render::symbolFor($note) ?> <?= $key ?></h3>
+    <pre><?= implode(', ', Render::symbolsFor(Scale::of($note, $interval))) ?></pre>
+    <pre><?= print_r(Guitar::tabulate(Scale::of($note, $interval)), true) ?></pre>
+</section>
+<section>
+    <h3><?= Render::symbolFor($note) ?> Chord</h3>
+    <pre><?= implode(', ', Render::symbolsFor(Chord::withRoot($note, $interval))) ?></pre>
+    <pre><?= print_r(Guitar::tabulate(Chord::withRoot($note, $interval)), true) ?></pre>
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => document
+        .getElementById('key')
+        .addEventListener('change', () => document
+            .getElementById('form')
+            .submit()));
+</script>
 </body>
 </html>
