@@ -14,7 +14,7 @@
 <div class="container">
     <div class="row">
         <h1 class="text-center">Chromatic Staff</h1>
-        <div class="col-xs-12">
+        <div class="col-sm-12">
             <label id="chromatic"></label>
             <pre id="chromatic-staff"></pre>
         </div>
@@ -24,12 +24,12 @@
             <select id="key"></select>
             <select id="interval"></select>
         </h1>
-        <div class="col-xs-6">
+        <div class="col-sm-6">
             <legend class="text-center">Scale</legend>
             <label id="scale"></label>
             <pre id="scale-staff"></pre>
         </div>
-        <div class="col-xs-6">
+        <div class="col-sm-6">
             <legend class="text-center">Triad</legend>
             <label id="triad"></label>
             <pre id="triad-staff"></pre>
@@ -37,10 +37,10 @@
     </div>
     <legend class="text-center">Tabs</legend>
     <div class="row">
-        <div class="col-xs-6">
+        <div class="col-sm-6">
             <pre id="scale-tab"></pre>
         </div>
-        <div class="col-xs-6">
+        <div class="col-sm-6">
             <pre id="triad-tab"></pre>
         </div>
     </div>
@@ -107,7 +107,9 @@
                 .map(root => [0, 1, 2, 3, 4].map(add => (root + add) % CHROMATIC.length))
                 .reverse()
                 .map(g => CHROMATIC[g[0]].trim() + notes
-                    .map(n => ('---' + (g.includes(n) ? (n + CHROMATIC.length - g[0]) % CHROMATIC.length : '')).slice(-3))
+                    .map(n => n % CHROMATIC.length)
+                    .map(n => g.includes(n) ? (n + CHROMATIC.length - g[0]) % CHROMATIC.length : '')
+                    .map(n => ('---' + n).substr(-3))
                     .chunk(4, true)
                     .map(g => ['|'].concat(g.map(t => t === null ? '---' : t))).flatten()
                     .join('') + '||')
@@ -115,7 +117,7 @@
         }
 
         static spellOut(notes) {
-            return notes.map((n, i) => `(${i}) ${this.draw(n).trim()}`).join(', ')
+            return notes.map((n, i) => { console.log(n, i, notes); return `(${n}) ${this.draw(n).trim()}`; }).join(', ')
         }
 
         static render() {
@@ -163,7 +165,8 @@
             option.text = interval;
             intervalInput.appendChild(option);
         }
-        document.getElementById('chromatic').innerHTML = Renderer.spellOut(CHROMATIC);
+
+        document.getElementById('chromatic').innerHTML = Renderer.spellOut(Object.keys(CHROMATIC).map(n => parseInt(n)));
         document.getElementById('chromatic-staff').innerHTML = Renderer.drawStaff(CHROMATIC);
         Renderer.render();
     });
