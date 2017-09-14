@@ -20,7 +20,10 @@
         </div>
     </div>
     <div class="row">
-        <h1 id="selection" class="text-center">C Major</h1>
+        <h1 id="selection" class="text-center">
+            <select id="key"></select>
+            <select id="interval"></select>
+        </h1>
         <div class="col-xs-6">
             <h3 class="text-center">Scale</h3>
             <label id="scale"></label>
@@ -52,69 +55,91 @@
 
     const CHROMATIC = [' C  ', ' C# ', ' D  ', ' D# ', ' E  ', ' F  ', ' F# ', ' G  ', ' G# ', ' A  ', ' A# ', ' B  '];
     const INTERVALS = {
-        Chromatic: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         Major: [0, 2, 2, 2, 1, 2, 2],
         Minor: [0, 2, 1, 2, 2, 1, 2],
     };
 
-    const query = window.location.search.slice(1).split('&').map(q => q.split('=')).reduce((acc, pair) => (acc[pair[0]] = pair[1]) && acc, {});
-    const key = CHROMATIC[query.key] || CHROMATIC[0];
-    const interval = INTERVALS.hasOwnProperty(query.interval) ? query.interval : Object.keys(INTERVALS)[1];
+    const keyInput = document.getElementById('key');
+    const intervalInput = document.getElementById('interval');
 
-    function draw(note) {
-        if (note instanceof Array) return note.map(n => CHROMATIC[n % CHROMATIC.length]);
-        if (typeof note === 'number') return CHROMATIC[note % CHROMATIC.length];
-        if (undefined === note) {
-            throw Error('Bad note');
+    class Renderer {
+        static draw(note) {
+            if (note instanceof Array) return note.map(n => CHROMATIC[n % CHROMATIC.length]);
+            if (typeof note === 'number') return CHROMATIC[note % CHROMATIC.length];
+            if (undefined === note) {
+                throw Error('Bad note');
+            }
+            return note;
         }
-        return note;
+
+        static drawStaff(notes) {
+            if (!notes) return;
+
+            notes = (notes instanceof Array ? notes : [notes]).map(Music.findNote);
+            return [[5, 6], [7, 8], [9, 10], [11], [0, 1], [2, 3], [4]]
+                .reverse()
+                .map((g, i) => {
+                    const line = CHROMATIC[g[0]].trim() + notes
+                        .map(n => g.includes(n % CHROMATIC.length) ? this.draw(n) : '    ')
+                        .chunk(4, true)
+                        .map(g => ['|'].concat(g)).flatten()
+                        .join('') + '||';
+                    return i % 2 ? line.replace(/ /g, '-') : line;
+                })
+                .join("\n");
+        }
+
+        static spellOut(notes) {
+            return notes.map((n, i) => `(${i}) ${this.draw(n).trim()}`).join(', ')
+        }
+
+        static render() {
+            const key = parseInt(keyInput.options[keyInput.selectedIndex].value);
+            const interval = intervalInput.options[intervalInput.selectedIndex].value;
+            const scale = Music.makeScale(key, INTERVALS[interval]);
+            const triad = Music.makeTriad(key, INTERVALS[interval]);
+            document.getElementById('scale').innerHTML = Renderer.spellOut(scale);
+            document.getElementById('scale-staff').innerHTML = Renderer.drawStaff(scale);
+            document.getElementById('triad').innerHTML = Renderer.spellOut(triad);
+            document.getElementById('triad-staff').innerHTML = Renderer.drawStaff(triad);
+        }
     }
 
-    function drawStaff(notes) {
-        if (!notes) return;
+    class Music {
+        static findNote(note = 0) {
+            return typeof note === 'string' ? CHROMATIC.indexOf(note) : note;
+        }
 
-        notes = (notes instanceof Array ? notes : [notes]).map(findNote);
-        return [[5, 6], [7, 8], [9, 10], [11], [0, 1], [2, 3], [4]]
-            .reverse()
-            .map((g, i) => {
-                const line = CHROMATIC[g[0]].trim() + notes
-                    .map(n => g.includes(n % CHROMATIC.length) ? draw(n) : '    ')
-                    .chunk(4, true)
-                    .map(g => ['|'].concat(g)).flatten()
-                    .join('') + '||';
-                return i % 2 ? line.replace(/ /g, '-') : line;
-            })
-            .join("\n");
+        static makeScale(note = 0, interval = INTERVALS.Major) {
+            note = this.findNote(note);
+            return interval.map(i => note += i);
+        }
+
+        static makeTriad(note = 0, interval = INTERVALS.Major) {
+            const scale = this.makeScale(note, interval);
+            return [0, 2, 4].map(i => scale[i]);
+        }
     }
 
-    function findNote(note = 0) {
-        return typeof note === 'string' ? CHROMATIC.indexOf(note) : note;
-    }
-
-    function makeScale(note = 0, interval = INTERVALS.MAJOR) {
-        note = findNote(note);
-        return interval.map(i => note += i);
-    }
-
-    function makeTriad(note = 0, interval = INTERVALS.MAJOR) {
-        note = findNote(note);
-        const scale = makeScale(note, interval);
-        return [0, 2, 4].map(i => scale[i]);
-    }
-
-    function spellOut(notes) {
-        return notes.map((n, i) => `(${i}) ${draw(n).trim()}`).join(', ')
-    }
-
-    const scale = makeScale(key, INTERVALS[interval]);
-    const triad = makeTriad(key, INTERVALS[interval]);
-    document.getElementById('selection').innerHTML = `${key} ${interval}`;
-    document.getElementById('chromatic').innerHTML = spellOut(CHROMATIC);
-    document.getElementById('chromatic-staff').innerHTML = drawStaff(CHROMATIC);
-    document.getElementById('scale').innerHTML = spellOut(scale);
-    document.getElementById('scale-staff').innerHTML = drawStaff(scale);
-    document.getElementById('triad').innerHTML = spellOut(triad);
-    document.getElementById('triad-staff').innerHTML = drawStaff(triad);
+    document.addEventListener("DOMContentLoaded", function () {
+        keyInput.addEventListener('change', Renderer.render);
+        intervalInput.addEventListener('change', Renderer.render);
+        CHROMATIC.forEach((s, i) => {
+            const option = document.createElement('option');
+            option.value = i;
+            option.text = s.trim();
+            keyInput.appendChild(option);
+        });
+        for (let interval in INTERVALS) {
+            const option = document.createElement('option');
+            option.value = interval;
+            option.text = interval;
+            intervalInput.appendChild(option);
+        }
+        document.getElementById('chromatic').innerHTML = Renderer.spellOut(CHROMATIC);
+        document.getElementById('chromatic-staff').innerHTML = Renderer.drawStaff(CHROMATIC);
+        Renderer.render();
+    });
 </script>
 </body>
 </html>
