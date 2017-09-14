@@ -62,7 +62,7 @@
         return this.reduce((acc, e) => acc.concat(e instanceof Array ? e : [e]), []);
     };
 
-    const CHROMATIC = [' C  ', ' C# ', ' D  ', ' D# ', ' E  ', ' F  ', ' F# ', ' G  ', ' G# ', ' A  ', ' A# ', ' B  '];
+    const CHROMATIC = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const INTERVALS = {
         Major: [0, 2, 2, 2, 1, 2, 2],
         Minor: [0, 2, 1, 2, 2, 1, 2],
@@ -89,7 +89,7 @@
                 .reverse()
                 .map((g, i) => {
                     const line = CHROMATIC[g[0]].trim() + notes
-                        .map(n => g.includes(n % CHROMATIC.length) ? this.draw(n) : '    ')
+                        .map(n => g.includes(n % CHROMATIC.length) ? (' ' + this.draw(n) + '  ').substr(-4) : '    ')
                         .chunk(4, true)
                         .map(g => ['|'].concat(g.map(s => s === null ? '    ' : s))).flatten()
                         .join('') + '||';
@@ -117,7 +117,7 @@
         }
 
         static spellOut(notes) {
-            return notes.map((n, i) => { console.log(n, i, notes); return `(${n}) ${this.draw(n).trim()}`; }).join(', ')
+            return notes.map((n, i) => `(${n}) ${this.draw(n).trim()}`).join(', ')
         }
 
         static render() {
