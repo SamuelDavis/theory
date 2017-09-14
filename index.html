@@ -25,14 +25,23 @@
             <select id="interval"></select>
         </h1>
         <div class="col-xs-6">
-            <h3 class="text-center">Scale</h3>
+            <legend class="text-center">Scale</legend>
             <label id="scale"></label>
             <pre id="scale-staff"></pre>
         </div>
         <div class="col-xs-6">
-            <h3 class="text-center">Triad</h3>
+            <legend class="text-center">Triad</legend>
             <label id="triad"></label>
             <pre id="triad-staff"></pre>
+        </div>
+    </div>
+    <legend class="text-center">Tabs</legend>
+    <div class="row">
+        <div class="col-xs-6">
+            <pre id="scale-tab"></pre>
+        </div>
+        <div class="col-xs-6">
+            <pre id="triad-tab"></pre>
         </div>
     </div>
 </div>
@@ -42,7 +51,7 @@
         do {
             const chunk = this.splice(0, size);
             if (fill && chunk.length < size) {
-                chunk.splice(chunk.length, size - chunk.length, '       ');
+                chunk.splice(chunk.length, size - chunk.length, null);
             }
             tmp.push(chunk);
         } while (this.length);
@@ -82,10 +91,26 @@
                     const line = CHROMATIC[g[0]].trim() + notes
                         .map(n => g.includes(n % CHROMATIC.length) ? this.draw(n) : '    ')
                         .chunk(4, true)
-                        .map(g => ['|'].concat(g)).flatten()
+                        .map(g => ['|'].concat(g.map(s => s === null ? '    ' : s))).flatten()
                         .join('') + '||';
                     return i % 2 ? line.replace(/ /g, '-') : line;
                 })
+                .join("\n");
+        }
+
+        static drawTab(notes) {
+            if (!notes) return;
+
+            notes = (notes instanceof Array ? notes : [notes]).map(Music.findNote);
+            const ROOTS = [4, 9, 2, 7, 11, 4];
+            return ROOTS
+                .map(root => [0, 1, 2, 3, 4].map(add => (root + add) % CHROMATIC.length))
+                .reverse()
+                .map(g => CHROMATIC[g[0]].trim() + notes
+                    .map(n => ('---' + (g.includes(n) ? (n + CHROMATIC.length - g[0]) % CHROMATIC.length : '')).slice(-3))
+                    .chunk(4, true)
+                    .map(g => ['|'].concat(g.map(t => t === null ? '---' : t))).flatten()
+                    .join('') + '||')
                 .join("\n");
         }
 
@@ -100,8 +125,10 @@
             const triad = Music.makeTriad(key, INTERVALS[interval]);
             document.getElementById('scale').innerHTML = Renderer.spellOut(scale);
             document.getElementById('scale-staff').innerHTML = Renderer.drawStaff(scale);
+            document.getElementById('scale-tab').innerHTML = Renderer.drawTab(scale);
             document.getElementById('triad').innerHTML = Renderer.spellOut(triad);
             document.getElementById('triad-staff').innerHTML = Renderer.drawStaff(triad);
+            document.getElementById('triad-tab').innerHTML = Renderer.drawTab(triad);
         }
     }
 
