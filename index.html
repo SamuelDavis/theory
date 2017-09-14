@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <style>
+        body {
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <h1 class="text-center">Chromatic Staff</h1>
+        <div class="col-xs-12">
+            <label id="chromatic"></label>
+            <pre id="chromatic-staff"></pre>
+        </div>
+    </div>
+    <div class="row">
+        <h1 id="selection" class="text-center">C Major</h1>
+        <div class="col-xs-6">
+            <h3 class="text-center">Scale</h3>
+            <label id="scale"></label>
+            <pre id="scale-staff"></pre>
+        </div>
+        <div class="col-xs-6">
+            <h3 class="text-center">Triad</h3>
+            <label id="triad"></label>
+            <pre id="triad-staff"></pre>
+        </div>
+    </div>
+</div>
+<script>
+    Array.prototype.chunk = function (size = 1, fill = false) {
+        const tmp = [];
+        do {
+            const chunk = this.splice(0, size);
+            if (fill && chunk.length < size) {
+                chunk.splice(chunk.length, size - chunk.length, '       ');
+            }
+            tmp.push(chunk);
+        } while (this.length);
+        return tmp;
+    };
+
+    Array.prototype.flatten = function () {
+        return this.reduce((acc, e) => acc.concat(e instanceof Array ? e : [e]), []);
+    };
+
+    const CHROMATIC = [' C  ', ' C# ', ' D  ', ' D# ', ' E  ', ' F  ', ' F# ', ' G  ', ' G# ', ' A  ', ' A# ', ' B  '];
+    const INTERVALS = {
+        Chromatic: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        Major: [0, 2, 2, 2, 1, 2, 2],
+        Minor: [0, 2, 1, 2, 2, 1, 2],
+    };
+
+    const query = window.location.search.slice(1).split('&').map(q => q.split('=')).reduce((acc, pair) => (acc[pair[0]] = pair[1]) && acc, {});
+    const key = CHROMATIC[query.key] || CHROMATIC[0];
+    const interval = INTERVALS.hasOwnProperty(query.interval) ? query.interval : Object.keys(INTERVALS)[1];
+
+    function draw(note) {
+        if (note instanceof Array) return note.map(n => CHROMATIC[n % CHROMATIC.length]);
+        if (typeof note === 'number') return CHROMATIC[note % CHROMATIC.length];
+        if (undefined === note) {
+            throw Error('Bad note');
+        }
+        return note;
+    }
+
+    function drawStaff(notes) {
+        if (!notes) return;
+
+        notes = (notes instanceof Array ? notes : [notes]).map(findNote);
+        return [[5, 6], [7, 8], [9, 10], [11], [0, 1], [2, 3], [4]]
+            .reverse()
+            .map((g, i) => {
+                const line = CHROMATIC[g[0]].trim() + notes
+                    .map(n => g.includes(n % CHROMATIC.length) ? draw(n) : '    ')
+                    .chunk(4, true)
+                    .map(g => ['|'].concat(g)).flatten()
+                    .join('') + '||';
+                return i % 2 ? line.replace(/ /g, '-') : line;
+            })
+            .join("\n");
+    }
+
+    function findNote(note = 0) {
+        return typeof note === 'string' ? CHROMATIC.indexOf(note) : note;
+    }
+
+    function makeScale(note = 0, interval = INTERVALS.MAJOR) {
+        note = findNote(note);
+        return interval.map(i => note += i);
+    }
+
+    function makeTriad(note = 0, interval = INTERVALS.MAJOR) {
+        note = findNote(note);
+        const scale = makeScale(note, interval);
+        return [0, 2, 4].map(i => scale[i]);
+    }
+
+    function spellOut(notes) {
+        return notes.map((n, i) => `(${i}) ${draw(n).trim()}`).join(', ')
+    }
+
+    const scale = makeScale(key, INTERVALS[interval]);
+    const triad = makeTriad(key, INTERVALS[interval]);
+    document.getElementById('selection').innerHTML = `${key} ${interval}`;
+    document.getElementById('chromatic').innerHTML = spellOut(CHROMATIC);
+    document.getElementById('chromatic-staff').innerHTML = drawStaff(CHROMATIC);
+    document.getElementById('scale').innerHTML = spellOut(scale);
+    document.getElementById('scale-staff').innerHTML = drawStaff(scale);
+    document.getElementById('triad').innerHTML = spellOut(triad);
+    document.getElementById('triad-staff').innerHTML = drawStaff(triad);
+</script>
+</body>
+</html>
