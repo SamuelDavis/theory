@@ -20,6 +20,13 @@
         </div>
     </div>
     <div class="row">
+        <h1 class="text-center"><select id="string"></select> Staff</h1>
+        <div class="col-sm-12">
+            <label id="per-string"></label>
+            <pre id="per-string-staff"></pre>
+        </div>
+    </div>
+    <div class="row">
         <h1 id="selection" class="text-center">
             <select id="key"></select>
             <select id="interval"></select>
@@ -68,8 +75,13 @@
         Minor: [0, 2, 1, 2, 2, 1, 2],
     };
 
+    const TUNING = {
+        classic: [4, 9, 2, 7, 11, 4],
+    };
+
     const keyInput = document.getElementById('key');
     const intervalInput = document.getElementById('interval');
+    const stringInput = document.getElementById('string');
 
     class Renderer {
         static draw(note) {
@@ -98,13 +110,16 @@
                 .join("\n");
         }
 
-        static drawTab(notes) {
+        static drawTab(notes, roots = TUNING.classic, tabsPerString = 5) {
             if (!notes) return;
 
+            tabsPerString = new Array(tabsPerString)
+                .fill(undefined)
+                .map((_, i) => i);
+
             notes = (notes instanceof Array ? notes : [notes]).map(Music.findNote);
-            const ROOTS = [4, 9, 2, 7, 11, 4];
-            return ROOTS
-                .map(root => [0, 1, 2, 3, 4].map(add => (root + add) % CHROMATIC.length))
+            return roots
+                .map(root => tabsPerString.map(add => (root + add) % CHROMATIC.length))
                 .reverse()
                 .map(g => CHROMATIC[g[0]].trim() + notes
                     .map(n => n % CHROMATIC.length)
@@ -125,7 +140,9 @@
             const interval = intervalInput.options[intervalInput.selectedIndex].value;
             const scale = Music.makeScale(key, INTERVALS[interval]);
             const triad = Music.makeTriad(key, INTERVALS[interval]);
+            const string = parseInt(stringInput.options[stringInput.selectedIndex].value);
             document.getElementById('scale').innerHTML = Renderer.spellOut(scale);
+            document.getElementById('per-string-staff').innerHTML = Renderer.drawTab(CHROMATIC, [string], CHROMATIC.length);
             document.getElementById('scale-staff').innerHTML = Renderer.drawStaff(scale);
             document.getElementById('scale-tab').innerHTML = Renderer.drawTab(scale);
             document.getElementById('triad').innerHTML = Renderer.spellOut(triad);
@@ -153,6 +170,15 @@
     document.addEventListener("DOMContentLoaded", function () {
         keyInput.addEventListener('change', Renderer.render);
         intervalInput.addEventListener('change', Renderer.render);
+        stringInput.addEventListener('change', Renderer.render);
+
+        TUNING.classic.forEach(root => {
+            const option = document.createElement('option');
+            option.value = root;
+            option.text = Renderer.draw(root);
+            stringInput.appendChild(option);
+        });
+
         CHROMATIC.forEach((s, i) => {
             const option = document.createElement('option');
             option.value = i;
