@@ -204,9 +204,13 @@
         stringChallenge.addEventListener('click', function () {
             stringChallengeModal.classList.add('show');
             stringChallengeInterval = setInterval(function () {
-                const note = CHROMATIC[Math.floor(Math.random() * CHROMATIC.length)];
+                const note = Math.floor(Math.random() * CHROMATIC.length);
                 const string = parseInt(stringInput.options[stringInput.selectedIndex].value);
-                stringChallengeNote.innerHTML = Renderer.drawStaff(note);
+                const replace = note <= 5 ? 'q' : 'd';
+                console.log(note);
+                stringChallengeNote.innerHTML = Renderer.drawStaff(note)
+                    .replace(/[A-Z]\|/g, '|')
+                    .replace(/[A-Z]/g, replace);
                 stringChallengeTab.innerHTML = Renderer.drawTab(note, [string], CHROMATIC.length)
             }, 1000);
         });
